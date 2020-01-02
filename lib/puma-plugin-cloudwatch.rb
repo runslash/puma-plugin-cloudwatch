@@ -1,0 +1,1 @@
+require 'puma/plugin/cloudwatch'
