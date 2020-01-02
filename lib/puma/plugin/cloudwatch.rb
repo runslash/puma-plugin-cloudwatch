@@ -70,11 +70,24 @@ Puma::Plugin.create do
       dimensions.push({ name: dim_name, value: dim_value })
     end
 
+    excluded_metrics = ENV.fetch('PUMA_CLOUDWATCH_EXCLUDE', '').split(',')
+    allowed_metrics = [
+      'PumaWorkers', 'PumaBootedWorkers', 'PumaBacklog', 'PumaPoolCapacity'
+    ].reject do |item|
+      excluded_metrics.include?(item.slice(4, item.length - 4))
+    end
+
+    dimension_inspect = dimensions.collect do |dim|
+      "#{dim[:name]}=#{dim[:value]}"
+    end
+
     in_background do
       launcher.events.log \
         "- CloudWatch plugin enabled, reporting every #{sleep_duration} seconds"
       launcher.events.log \
-        "- CloudWatch plugin dimensions: #{dimensions}"
+        "- CloudWatch plugin enabled metrics: #{allowed_metrics.join(', ')}"
+      launcher.events.log \
+        "- CloudWatch plugin dimensions: #{dimension_inspect.join(', ')}"
       loop do
         sleep(sleep_duration)
 
@@ -85,30 +98,32 @@ Puma::Plugin.create do
           namespace: ENV.fetch('PUMA_CLOUDWATCH_NAMESPACE', 'puma'),
           metric_data: [
             {
-              metric_name: 'PUMA-Workers',
+              metric_name: 'PumaWorkers',
               value: puma_statistics.workers,
               unit: 'Count',
               dimensions: dimensions
             },
             {
-              metric_name: 'PUMA-BootedWorkers',
+              metric_name: 'PumaBootedWorkers',
               value: puma_statistics.booted_workers,
               unit: 'Count',
               dimensions: dimensions
             },
             {
-              metric_name: 'PUMA-Backlog',
+              metric_name: 'PumaBacklog',
               value: puma_statistics.backlog,
               unit: 'Count',
               dimensions: dimensions
             },
             {
-              metric_name: 'PUMA-PoolCapacity',
+              metric_name: 'PumaPoolCapacity',
               value: puma_statistics.pool_capacity,
               unit: 'Count',
               dimensions: dimensions
             }
-          ]
+          ].reject do |item|
+            !allowed_metrics.include?(item[:metric_name])
+          end
         }
 
         cw_client.put_metric_data(cw_params)

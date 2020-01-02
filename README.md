@@ -41,6 +41,7 @@ The following environment variables are available (with their defaults):
 PUMA_CLOUDWATCH_INTERVAL=60
 PUMA_CLOUDWATCH_DIMENSIONS="Platform=test;Environment=development"
 PUMA_CLOUDWATCH_NAMESPACE=puma
+PUMA_CLOUDWATCH_EXCLUDE=Workers,BootedWorkers
 ```
 
 ## Development
